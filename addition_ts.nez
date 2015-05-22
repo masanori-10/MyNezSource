@@ -1,0 +1,208 @@
+//UniversalResourceIdentifierCharacterClasses
+//==========
+
+/* Unused
+uri
+  = uriCharacters?
+
+uriCharacters
+  = uriCharacter (__ uriCharacter)
+
+uriCharacter
+  = uriReserved
+  = uriUnescaped
+  = uriEscaped
+
+uriReserved
+  = [;/?:@&=+$,]
+
+uriUnescaped
+  = uriAlpha
+  = DecimalDigit
+  = uriMark
+
+uriEscaped
+  = "%" __ HexDigit __ HexDigit
+
+uriAlpha
+  = [a-zA-Z]
+
+uriMark
+  = '-' / [_.!~*'()]
+*/
+
+//RegularExpressions
+//==========
+
+/* Unused
+Pattern
+  = Disjunction
+
+Disjunction
+  = Alternative
+  / Alternative  "|"  Disjunction
+
+Alternative
+  = (Alternative  Term)?
+
+Term
+  = Assertion
+  / Atom
+  / Atom  Quantifier
+
+Assertion
+  = "^"
+  / '$'
+  / '\\' 'b'
+  / '\\' 'B'
+  / '('  '?'  '='  Disjunction ')'
+  / '('  '?'  '!'  Disjunction ')'
+
+Quantifier
+  = QuantifierPrefix '?'?
+
+QuantifierPrefix
+  = "*"
+  / "+"
+  / '?'
+  / '{' DecimalDigits '}'
+  / '{' DecimalDigits ',' '}'
+  / '{' DecimalDigits ',' DecimalDigits '}'
+
+Atom
+  = PatternCharacter
+  / '.'
+  / '\\' AtomEscape
+  / CharacterClass
+  / '(' Disjunction ')'
+  / '(' '?' ':' Disjunction ')'
+
+PatternCharacter
+  = !('-' / [^$\.*+?(){}|] / '[' / ']') .
+
+AtomEscape
+  = DecimalEscape
+  / CharacterEscape
+  / CharacterClassEscape
+
+CharacterEscape
+  = ControlEscape
+  / 'c' ControlLetter
+  / HexEscapeSequence
+  / UnicodeEscapeSequence
+  / IdentityEscape
+
+ControlEscape
+  = [fnrtv]
+
+ControlLetter
+  = [a-zA-Z]
+
+IdentityEscape
+  = !IdentifierPart .
+  / [\u200C]
+
+DecimalEscape
+  = DecimalIntegerLiteral !DecimalDigit
+
+CharacterClassEscape
+  = [dDsSwW]
+
+CharacterClass
+  = '[' !'^' ClassRanges ']'
+  / '[' '^' ClassRanges ']'
+
+ClassRanges
+  = NonemptyClassRanges?
+
+NonemptyClassRanges
+  = ClassAtom
+  / ClassAtom NonemptyClassRangesNoDash
+  / ClassAtom '-' ClassAtom ClassRanges
+
+NonemptyClassRangesNoDash
+  = ClassAtom
+  / ClassAtomNoDash NonemptyClassRangesNoDash
+  / ClassAtomNoDash '-' ClassAtom ClassRanges
+
+ClassAtom
+  = '-'
+  / ClassAtomNoDash
+
+ClassAtomNoDash
+  = !('\\' / ']' / '-') .
+  = '\\' ClassEscape
+
+ClassEscape
+  = DecimalEscape
+  / 'b'
+  / CharacterEscape
+  / CharacterClassEscape
+*/
+
+//JSONLexicalGrammar
+//==========
+
+/* Unused
+JSONWhiteSpace
+  = [\u0009\u000D\u000A\u0020]
+JSONString
+  = ["] JSONStringCharacters? ["]
+
+JSONStringCharacters
+  = JSONStringCharacter+
+
+JSONStringCharacter
+  = !(["\] / [\u0000-\u001F]) .
+  / '\\' JSONEscapeSequence
+
+JSONEscapeSequence
+  = JSONEscapeCharacter
+  / UnicodeEscapeSequence
+
+JSONEscapeCharacter
+  = ["/\bfnrt]
+
+JSONNumber
+  = "-"? DecimalIntegerLiteral JSONFraction? ExponentPart?
+
+JSONFraction
+  = '.' DecimalDigits
+
+JSONNullLiteral
+  = NullLiteral
+
+JSONBooleanLiteral
+  = BooleanLiteral
+
+//JSONSyntacticGrammar
+//==========
+
+JSONText
+  = JSONValue
+
+JSONValue
+  = JSONNullLiteral
+  / JSONBooleanLiteral
+  / JSONObject
+  / JSONArray
+  / JSONString
+  / JSONNumber
+
+JSONObject
+  = '{' '}'
+  / '{' JSONMemberList '}'
+
+JSONMember
+  = JSONString ':' JSONValue
+
+JSONMemberList
+  = JSONMember ( , JSONMember)*
+
+JSONArray
+  = '[' ']'
+  / '[' JSONElementList ']'
+
+JSONElementList
+  = JSONValue ( , JSONValue)*
+*/
