@@ -2,7 +2,7 @@
 //==========
 
 File
-  = SourceFile
+  = __ SourceFile __
 
   W
     = [a-zA-Z0-9_]
@@ -918,9 +918,7 @@ Identifier
 //==========
 
 __                   //Space including LineTerminator
-  = WhiteSpace
-  / LineTerminator
-  / Comment
+  = (WhiteSpace / LineTerminator / Comment)*
 
   WhiteSpace
     = [\u0009\u000B\u000C\u0020\u00A0\uFEFF]
@@ -936,21 +934,25 @@ __                   //Space including LineTerminator
     / SingleLineComment
 
     MultiLineComment
-      = '/*' MultiLineCommentChars? '*/'
+        = '/*' (!'*/' .)* '*/'
 
-      MultiLineCommentChars
-        = MultiLineNotAsteriskChar MultiLineCommentChars?
-        / "*" PostAsteriskCommentChars?
 
-      PostAsteriskCommentChars
-        = MultiLineNotForwardSlashOrAsteriskChar MultiLineCommentChars?
-        / "*" PostAsteriskCommentChars?
+//    MultiLineComment
+//      = '/*' MultiLineCommentChars? '*/'
 
-      MultiLineNotAsteriskChar
-        = !'*' .
+      //MultiLineCommentChars
+      //  = MultiLineNotAsteriskChar MultiLineCommentChars?
+      //  / '*' PostAsteriskCommentChars?
+      //
+      //PostAsteriskCommentChars
+      //  = MultiLineNotForwardSlashOrAsteriskChar MultiLineCommentChars?
+      //  / '*' PostAsteriskCommentChars?
+      //
+      //MultiLineNotAsteriskChar
+      //  = !'*' .
 
-      MultiLineNotForwardSlashOrAsteriskChar
-        = ![/*] .
+//      MultiLineNotForwardSlashOrAsteriskChar
+//        = ![/*] .
 
     SingleLineComment
       = '//' SingleLineCommentChars?
@@ -962,8 +964,7 @@ __                   //Space including LineTerminator
         = !LineTerminator .
 
 _                  //Space without LineTerminator
-  = WhiteSpace
-  / InLineComment
+  = (WhiteSpace / InLineComment)*
 
   InLineComment
     = '/*' InLineCommentChars? '*/'
