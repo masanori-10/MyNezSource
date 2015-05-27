@@ -2,7 +2,7 @@
 //==========
 
 File
-  = { __ @SourceFile __ #File }
+  = { (__ @SourceFile)? __ #File }
 
   W
     = [a-zA-Z0-9_]
@@ -96,20 +96,17 @@ File
 //==========
 
 SourceFile
-  = { @ImplementationSourceFile #TSSource }
-  / { @DeclarationSourceFile #DTSSource }
+  = { @ImplementationElements #ImplementationSourceFile }
+  / { @DeclarationElements #DeclarationSourceFile }
 
-  ImplementationSourceFile
-    = ImplementationElements?
-
-    ImplementationElements
-      = { @ImplementationElement (__ @ImplementationElement)* }
+  ImplementationElements
+    = { @ImplementationElement (__ @ImplementationElement)* }
 
     ImplementationElement
-      = ModuleElement
-      / ExportAssignment
-      / AmbientExternalModuleDeclaration
-      / { ("export" __ #Export)? @ExternalImportDeclaration }
+      = { @ModuleElement #ImplementationElement }
+      / { @ExportAssignment #ImplementationElement }
+      / { @AmbientExternalModuleDeclaration #ImplementationElement }
+      / { ("export" __ #Export)? @ExternalImportDeclaration #ImplementationElement }
 
       ExportAssignment
         = { "export" __ "=" __ @Identifier __ ';' #ExportAssignment }
@@ -120,11 +117,8 @@ SourceFile
         ExternalModuleReference
           = { "require" __ '(' __ @StringLiteral __ ')' #ExternalModuleReference }
 
-  DeclarationSourceFile
-    = DeclarationElements?
-
-    DeclarationElements
-      = { @DeclarationElement (__ @DeclarationElement)* }
+  DeclarationElements
+    = { @DeclarationElement (__ @DeclarationElement)* }
 
     DeclarationElement
       = ExportAssignment
@@ -152,7 +146,7 @@ InterfaceDeclaration
 //==========
 
 ClassDeclaration
-  = { "class" __ @Identifier (__ @TypeParameters)? __ @ClassHeritage __ '{' __ @ClassBody __ '}' #ClassDeclaration }
+  = { "class" __ @Identifier (__ @TypeParameters)? __ @ClassHeritage __ '{' (__ @ClassElements)? __ '}' #ClassDeclaration }
 
   ClassHeritage
     = { @ClassExtendsClause (__ @ImplementsClause)?
@@ -167,11 +161,8 @@ ClassDeclaration
     ImplementsClause
       = { "implements" __ @ClassOrInterfaceTypeList #Implements }
 
-  ClassBody
-    = ClassElements?
-
-    ClassElements
-      = { @ClassElement (__ @ClassElement)* }
+  ClassElements
+    = { @ClassElement (__ @ClassElement)* }
 
     ClassElement
       = ConstructorDeclaration
@@ -196,7 +187,7 @@ ClassDeclaration
         / @MemberAccessorDeclaration) #PropertyMemberDeclaration }
 
         MemberVariableDeclaration
-          = { (@AccessibilityModifier __)? ("static" __)? @PropertyName (__ @TypeAnnotation)? (__ @Initialiser)? __ ';' #MemberVariableDeclaration }
+          = { (@AccessibilityModifier __)? ("static" __)? @PropertyName (__ @TypeAnnotation)? (__ initialiser)? __ ';' #MemberVariableDeclaration }
 
         MemberFunctionDeclaration
           = { (@MemberFunctionOverloads __)? @MemberFunctionImplementation #MemberFunctionDeclaration }
@@ -253,20 +244,17 @@ EnumDeclaration
 ModuleElement
   = Statement
   / { ("export" __ #Export)? (
-  @VariableDeclaration / @FunctionDeclaration / @ClassDeclaration / @InterfaceDeclaration / @TypeAliasDeclaration / @EnumDeclaration / @ModuleDeclaration / @ImportDeclaration / @AmbientDeclaration
-  ) }
+  @VariableDeclaration / functionDeclaration / @ClassDeclaration / @InterfaceDeclaration / @TypeAliasDeclaration / @EnumDeclaration / @ModuleDeclaration / @ImportDeclaration / @AmbientDeclaration
+  ) #ModuleElement }
 
   ModuleDeclaration
-    = { "module" __ @IdentifierPath __ '{' __ @ModuleBody __ '}' #ModuleDeclaration }
+    = { "module" __ @IdentifierPath __ '{' (__ @ModuleElements)? __ '}' #ModuleDeclaration }
 
     IdentifierPath
       = { @Identifier (__ '.' __ @Identifier)* #IdentifierPath }
 
-    ModuleBody
-      = ModuleElements?
-
-      ModuleElements
-        = { @ModuleElement (__ @ModuleElement)* }
+    ModuleElements
+      = { @ModuleElement (__ @ModuleElement)* }
 
   ImportDeclaration
     = { "import" __ @Identifier __ "=" __ @EntityName __ ';' #ImportDeclaration }
@@ -289,10 +277,7 @@ AmbientDeclaration
     = { "function" __ @Identifier __ @CallSignature __ ';' #AmbientFunctionDeclaration}
 
   AmbientClassDeclaration
-    = { "class" __ @Identifier (__ @TypeParameters)? __ @ClassHeritage __ '{' __ @AmbientClassBody __ '}' #AmbientClassDeclaration }
-
-    AmbientClassBody
-      = AmbientClassBodyElements?
+    = { "class" __ @Identifier (__ @TypeParameters)? __ @ClassHeritage __ '{' (__ @AmbientClassBodyElements)? __ '}' #AmbientClassDeclaration }
 
       AmbientClassBodyElements
         = { @AmbientClassBodyElement (__ @AmbientClassBodyElement)* }
@@ -321,10 +306,7 @@ AmbientDeclaration
       = { @PropertyName (__ "=" __ @ConstantEnumValue)? }
 
   AmbientModuleDeclaration
-    = { "module" __ @IdentifierPath __ '{' __ @AmbientModuleBody __ '}' #AmbientModuleDeclaration }
-
-    AmbientModuleBody
-      = AmbientModuleElements?
+    = { "module" __ @IdentifierPath __ '{' (__ @AmbientModuleElements)? __ '}' #AmbientModuleDeclaration }
 
     AmbientModuleElements
       = { @AmbientModuleElement (__ @AmbientModuleElement)* }
@@ -335,10 +317,7 @@ AmbientDeclaration
       ) }
 
 AmbientExternalModuleDeclaration
-  = { "module" __ @StringLiteral __ '{' __ @AmbientExternalModuleBody __ '}' #AmbientExternalModuleDeclaration }
-
-  AmbientExternalModuleBody
-    = AmbientExternalModuleElements?
+  = { "module" __ @StringLiteral __ '{' (__ @AmbientExternalModuleElements)? __ '}' #AmbientExternalModuleDeclaration }
 
   AmbientExternalModuleElements
     = { @AmbientExternalModuleElement (__ @AmbientExternalModuleElement)* }
@@ -346,16 +325,16 @@ AmbientExternalModuleDeclaration
   AmbientExternalModuleElement
     = AmbientModuleElement
     / ExportAssignment
-    / { ("export" __ #Export)? ExternalImportDeclaration }
+    / { ("export" __ #Export)? @ExternalImportDeclaration }
 
 //FunctionDeclaration
 //==========
 
-FunctionDeclaration
-  = (FunctionOverloads __)? FunctionImplementation
+functionDeclaration
+  =  (functionOverloads __)? @FunctionImplementation
 
-  FunctionOverloads
-    = FunctionOverload (__ FunctionOverload)*
+  functionOverloads
+    = @FunctionOverload (__ @FunctionOverload)*
 
     FunctionOverload
       = { "function" __ @Identifier __ @CallSignature __ ';' #FuncDecl }
@@ -364,11 +343,7 @@ FunctionDeclaration
     = { "function" __ @Identifier __ @CallSignature __ '{' __ @FunctionBody __ '}' #FuncDecl }
 
     FunctionBody
-      = { (@SourceElement (__ @SourceElement)* )? #FuncBody }
-
-      SourceElement
-        = Statement
-        / FunctionDeclaration
+      = { @SourceFile #FuncBody }
 
 //Statement
 //==========
@@ -397,21 +372,21 @@ Statement
     = { "var" __ @VariableDeclarationList __ ';' #VarDeclStmt }
 
     VariableDeclarationList
-      = VariableDeclaration (__ ',' __ VariableDeclaration)*
+      = { @VariableDeclaration (__ ',' __ @VariableDeclaration)* }
 
-    VariableDeclarationListNoIn
-      = VariableDeclarationNoIn (__ ',' __ VariableDeclarationNoIn)*
+    variableDeclarationListNoIn
+      = @VariableDeclarationNoIn (__ ',' __ @VariableDeclarationNoIn)*
 
       VariableDeclaration
-        = { @Identifier (__ TypeAnnotation)? (__ Initialiser)? #VarDecl }
+        = { @Identifier (__ @TypeAnnotation)? (__ initialiser)? #VarDecl }
 
       VariableDeclarationNoIn
-        = { @Identifier (__ TypeAnnotation)? (__ InitialiserNoIn)? #VarDecl }
+        = { @Identifier (__ @TypeAnnotation)? (__ initialiserNoIn)? #VarDecl }
 
-        Initialiser
+        initialiser
           = "=" __ @AssignmentExpression
 
-        InitialiserNoIn
+        initialiserNoIn
           = "=" __ @AssignmentExpressionNoIn
 
   EmptyStatement
@@ -427,7 +402,7 @@ Statement
     = { "do" __ @Statement __ "while" __ '(' __ @Expression __ ')' __ ';' #DoWhile }
     / { "while" __ '(' __ @Expression __ ')' __ @Statement #While }
     / { "for" __ '(' (__ @ExpressionNoIn)? __ ';' (__ @Expression)? __ ';' (__ @Expression)? __ ')' __ @Statement #For }
-    / { "for" __ '(' __ "var" __ @VariableDeclarationListNoIn __ ';' (__ @Expression)? __ ';' (__ @Expression)? __ ')' __ @Statement #ForVar }
+    / { "for" __ '(' __ "var" __ variableDeclarationListNoIn __ ';' (__ @Expression)? __ ';' (__ @Expression)? __ ')' __ @Statement #ForVar }
     / { "for" __ '(' __ @LeftHandSideExpression __ "in" __ @Expression __ ')' __ @Statement #ForEach }
     / { "for" __ '(' __ "var" __ @VariableDeclarationNoIn __ "in" __ @Expression __ ')' __ @Statement #ForVarEach }
 
@@ -447,9 +422,9 @@ Statement
     = { "switch" __ '(' __ @Expression __ ')' __ @CaseBlock #Switch }
 
     CaseBlock
-      = { '{' (__ @CaseClauses)? (__ @DefaultClause (__ @CaseClauses)?)? __ '}' #CaseBlock }
+      = { '{' (__ caseClauses)? (__ @DefaultClause (__ caseClauses)?)? __ '}' #CaseBlock }
 
-      CaseClauses
+      caseClauses
         = @CaseClause (__ @CaseClause)*
 
       CaseClause
@@ -465,12 +440,12 @@ Statement
     = { "throw" _ @Expression __ ';' #Throw }
 
   TryStatement
-    = { "try" __ @Block __ (@Catch (__ Finally)? / Finally) #Try }
+    = { "try" __ @Block __ (@Catch (__ finally)? / finally) #Try }
 
     Catch
     = { "catch" __ '(' __ @Identifier __ ')' __ @Block #Catch }
 
-    Finally
+    finally
     = "finally" __ @Block
 
   DebuggerStatement
@@ -483,11 +458,11 @@ Expression
   = AssignmentExpression {@ __ ',' __ @AssignmentExpression #Comma }*
 
   AssignmentExpression
-    = { @LeftHandSideExpression __ AssignmentOperator __ @AssignmentExpression }
-    / ConditionalExpression
-    / ArrowFunctionExpression
+    = { @LeftHandSideExpression __ assignmentOperator __ @AssignmentExpression
+    / conditionalExpression
+    / @ArrowFunctionExpression }
 
-    AssignmentOperator
+    assignmentOperator
       = "="     #Assign
       / '*='    #AssignMul
       / '/='    #AssignDiv
@@ -502,36 +477,35 @@ Expression
       / '|='    #AssignBitwiseOr
 
     LeftHandSideExpression
-      = NewExpression
-      / CallExpression
+      = { @NewExpression / callExpression }
 
       NewExpression
         = MemberExpression
         / { "new" __ @NewExpression #New }
 
-      CallExpression
-        = MemberExpressionWithArgs {@ __ CallOrMemberOperator }*
-        / "super" __ '(' (__ ArgumentList)? __ ')'
+      callExpression
+        = memberExpressionWithArgs {@ __ callOrMemberOperator }*
+        / "super" __ '(' (__ argumentList)? __ ')'
         / "super" __ '.' __ @IdentifierName
 
-        MemberExpressionWithArgs
+        memberExpressionWithArgs
           = @MemberExpression __ @Arguments
 
-        CallOrMemberOperator
+        callOrMemberOperator
           = '.' __ @IdentifierName #Field
           / @Arguments #Apply
           / '[' __ @Expression __ ']' #Index
 
           Arguments
-            = { (TypeArguments __)? '(' (__ ArgumentList)? __ ')' #List }
+            = { (@TypeArguments __)? '(' (__ argumentList)? __ ')' #List }
 
-            ArgumentList
+            argumentList
               = @AssignmentExpression (__ ',' __ @AssignmentExpression)*
 
         MemberExpression
-          = ReceiverExpression {@ __ MemberOperator }*
+          = ReceiverExpression {@ __ memberOperator }*
 
-          MemberOperator
+          memberOperator
             = '.' __ @IdentifierName #Field
             / '[' __ @Expression __ ']' #Index
 
@@ -549,18 +523,18 @@ Expression
               / '(' __ Expression __ ')'
 
               ArrayLiteral
-                = { '[' (__ ElementList)? __ ']' #Array }
+                = { '[' (__ elementList)? __ ']' #Array }
 
-                ElementList
-                  = (Elision __)? @AssignmentExpression (__ ',' (__ Elision)? __ @AssignmentExpression)* (__ ',' (__ Elision)?)?
+                elementList
+                  = (elision __)? @AssignmentExpression (__ ',' (__ elision)? __ @AssignmentExpression)* (__ ',' (__ elision)?)?
 
-                Elision
-                  = ',' { #Undefined } (__ ',' { #Undefined })*
+                elision
+                  = ',' #Undefined (__ ',' #Undefined )*
 
               ObjectLiteral
-                = { '{' (__ PropertyNameAndValueList (__ ',')?)? __ '}' #Object }
+                = { '{' (__ propertyNameAndValueList (__ ',')?)? __ '}' #Object }
 
-                PropertyNameAndValueList
+                propertyNameAndValueList
                   = @PropertyAssignment (__ ',' __ @PropertyAssignment)*
 
                   PropertyAssignment
@@ -569,10 +543,10 @@ Expression
                     / SetAccessor
 
                     GetAccessor
-                      = { "get" __ @PropertyName __ '(' __ ')' (__ TypeAnnotation)? __ '{' __ @FunctionBody __ '}' #GetterProperty }
+                      = { "get" __ @PropertyName __ '(' __ ')' (__ @TypeAnnotation)? __ '{' __ @FunctionBody __ '}' #GetterProperty }
 
                     SetAccessor
-                      = { "set" __ @PropertyName __ '(' __ @Identifier (__ TypeAnnotation)? __ ')' __ '{' __ @FunctionBody __ '}' #SetterProperty }
+                      = { "set" __ @PropertyName __ '(' __ @Identifier (__ @TypeAnnotation)? __ ')' __ '{' __ @FunctionBody __ '}' #SetterProperty }
 
             FunctionExpression
               = { "function" (__ @Identifier)? __ @CallSignature __ '{' __ @FunctionBody __ '}' #Function }
@@ -580,7 +554,7 @@ Expression
             NewExpressionWithArgs
               = { "new" __ @MemberExpression __ @Arguments #New }
 
-    ConditionalExpression
+    conditionalExpression
       = @LogicalORExpression (__ '?' __ @AssignmentExpression __ ':' __ @AssignmentExpression #Conditional)?
 
       LogicalORExpression
@@ -599,18 +573,18 @@ Expression
         = EqualityExpression {@ __ "&" __ @EqualityExpression #BitwiseAnd }*
 
       EqualityExpression
-        = RelationalExpression {@ __ EqualityOperator __ @RelationalExpression }*
+        = RelationalExpression {@ __ equalityOperator __ @RelationalExpression }*
 
-        EqualityOperator
+        equalityOperator
           = "=="  #Equals
           / "!="  #NotEquals
           / '===' #StrictEquals
           / '!==' #StrictNotEquals
 
       RelationalExpression
-        = ShiftExpression {@ __ RelationalOperator __ @ShiftExpression }*
+        = ShiftExpression {@ __ relationalOperator __ @ShiftExpression }*
 
-        RelationalOperator
+        relationalOperator
           = "<"           #LessThan
           / ">"           #GreaterThan
           / '<='          #LessThanEquals
@@ -619,9 +593,9 @@ Expression
           / "in"          #HashIn
 
       ShiftExpression
-        = AdditiveExpression {@ __ ShiftOperator __ @AdditiveExpression }*
+        = AdditiveExpression {@ __ shiftOperator __ @AdditiveExpression }*
 
-        ShiftOperator
+        shiftOperator
           = "<<"  #LeftShift
           / ">>"  #RightShift
           / '>>>' #LogicalRightShift
@@ -634,16 +608,16 @@ Expression
 
         UnaryExpression
           = PostfixExpression
-          / "delete"  #DeleteProperty __ @UnaryExpression
-          / "void"    #VoidExpression __ @UnaryExpression
-          / "typeof"  #TypeOf         __ @UnaryExpression
-          / '++'      #PrefixInc      __ @UnaryExpression
-          / '--'      #PrefixDec      __ @UnaryExpression
-          / "+"       #Plus           __ @UnaryExpression
-          / "-"       #Minus          __ @UnaryExpression
-          / '~'       #BitwiseNot     __ @UnaryExpression
-          / "!"       #LogicalNot     __ @UnaryExpression
-          / "<" __ Type __ ">"        __ @UnaryExpression
+          / { "delete"  #DeleteProperty __ @UnaryExpression }
+          / { "void"    #VoidExpression __ @UnaryExpression }
+          / { "typeof"  #TypeOf         __ @UnaryExpression }
+          / { '++'      #PrefixInc      __ @UnaryExpression }
+          / { '--'      #PrefixDec      __ @UnaryExpression }
+          / { "+"       #Plus           __ @UnaryExpression }
+          / { "-"       #Minus          __ @UnaryExpression }
+          / { '~'       #BitwiseNot     __ @UnaryExpression }
+          / { "!"       #LogicalNot     __ @UnaryExpression }
+          / { "<" __ @Type __ ">"        __ @UnaryExpression }
 
         PostfixExpression
           = { @LeftHandSideExpression _ ('++' #SuffixInc / '--' #SuffixDec) }
@@ -660,10 +634,10 @@ ExpressionNoIn
   = AssignmentExpressionNoIn {@ __ ',' __ @AssignmentExpressionNoIn #Comma }*
 
   AssignmentExpressionNoIn
-    = { @LeftHandSideExpression __ AssignmentOperator __ @AssignmentExpressionNoIn }
-    / ConditionalExpressionNoIn
+    = { @LeftHandSideExpression __ assignmentOperator __ @AssignmentExpressionNoIn
+    / conditionalExpressionNoIn }
 
-    ConditionalExpressionNoIn
+    conditionalExpressionNoIn
       = @LogicalORExpressionNoIn (__ '?' __ @AssignmentExpression __ ':' __ @AssignmentExpressionNoIn #Conditional)?
 
       LogicalORExpressionNoIn
@@ -682,12 +656,12 @@ ExpressionNoIn
         = EqualityExpressionNoIn {@ __ "&" __ @EqualityExpressionNoIn #BitwiseAnd }*
 
       EqualityExpressionNoIn
-        = RelationalExpressionNoIn {@ __ EqualityOperator __ @RelationalExpressionNoIn }*
+        = RelationalExpressionNoIn {@ __ equalityOperator __ @RelationalExpressionNoIn }*
 
       RelationalExpressionNoIn
-        = ShiftExpression {@ __ RelationalOperatorNoIn __ @ShiftExpression }*
+        = ShiftExpression {@ __ relationalOperatorNoIn __ @ShiftExpression }*
 
-        RelationalOperatorNoIn
+        relationalOperatorNoIn
         = "="           #Equals
         / "<"           #LessThan
         / ">"           #GreaterThan
@@ -807,18 +781,16 @@ Literal
   RegularExpressionLiteral
     = { "/" REGULAR_EXPRESSION_BODY "/" REGULAR_EXPRESSION_FLAGS #RegExp }
 
-    // FIXREGEXP
-
     REGULAR_EXPRESSION_BODY
-      = REGULAR_EXPRESSiON_FIRST_CHAR REGULAR_EXPRESSION_CHAR*
+      = REGULAR_EXPRESSION_FIRST_CHAR REGULAR_EXPRESSION_CHAR*
 
-      REGULAR_EXPRESSiON_FIRST_CHAR
+      REGULAR_EXPRESSION_FIRST_CHAR
         = !("*" / '\\' / '/' / '[') REGULAR_EXPRESSION_NON_TERMINATOR
         / REGULAR_EXPRESSION_BACKSLASH_SEQUENCE
         / REGULAR_EXPRESSION_CLASS
 
       REGULAR_EXPRESSION_CHAR
-        = "*" / REGULAR_EXPRESSiON_FIRST_CHAR
+        = "*" / REGULAR_EXPRESSION_FIRST_CHAR
 
         REGULAR_EXPRESSION_BACKSLASH_SEQUENCE
           = '\\' REGULAR_EXPRESSION_NON_TERMINATOR
@@ -882,25 +854,25 @@ Identifier
     / TYPE_SCRIPT_RESERVED_WORD
 
     KEYWORD
-      = "break"     / "case"        / "catch"       / "continue"
-      / "debugger"  / "default"     / "delete"      / "do"
-      / "else"      / "false"       / "finally"     / "for"
-      / "function"  / "if"          / "in"          / "instanceof"
-      / "new"       / "null"        / "return"      / "switch"
-      / "this"      / "throw"       / "true"        / "try"
-      / "typeof"    / "var"         / "void"        / "while"
-      / "with"
+      = 'break'     / 'case'        / 'catch'       / 'continue'
+      / 'debugger'  / 'default'     / 'delete'      / 'do'
+      / 'else'      / 'false'       / 'finally'     / 'for'
+      / 'function'  / 'if'          / 'in'          / 'instanceof'
+      / 'new'       / 'null'        / 'return'      / 'switch'
+      / 'this'      / 'throw'       / 'true'        / 'try'
+      / 'typeof'    / 'var'         / 'void'        / 'while'
+      / 'with'
 
     FUTURE_RESERVED_WORD
-      = "class"     / "const"       / "enum"        / "export"
-      / "extends"   / "implements"  / "import"      / "interface"
-      / "let"       / "package"     / "private"     / "protected"
-      / "public"    / "static"      / "super"       / "yield"
+      = 'class'     / 'const'       / 'enum'        / 'export'
+      / 'extends'   / 'implements'  / 'import'      / 'interface'
+      / 'let'       / 'package'     / 'private'     / 'protected'
+      / 'public'    / 'static'      / 'super'       / 'yield'
 
     TYPE_SCRIPT_RESERVED_WORD
-      = "any"       / "boolean"     / "constructor" / "declare"
-      / "get"       / "module"      / "number"      / "require"
-      / "set"       / "string"      / "type"
+      = 'any'       / 'boolean'     / 'constructor' / 'declare'
+      / 'get'       / 'module'      / 'number'      / 'require'
+      / 'set'       / 'string'      / 'type'
 
 //Space
 //==========
@@ -1102,7 +1074,7 @@ Type
 
         OptionalParameter
           = { (@AccessibilityModifier __)? @Identifier __ '?' (__ @TypeAnnotation)?
-          / (@AccessibilityModifier __)? @Identifier (__ @TypeAnnotation)? __ @Initialiser
+          / (@AccessibilityModifier __)? @Identifier (__ @TypeAnnotation)? __ initialiser
           / @Identifier __ '?' __ ':' __ @StringLiteral #OptionalParameter }
 
       RestParameter
