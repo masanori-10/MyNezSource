@@ -1,7 +1,6 @@
 //UniversalResourceIdentifierCharacterClasses
 //==========
 
-/* Unused
 uri
   = uriCharacters?
 
@@ -29,12 +28,10 @@ uriAlpha
 
 uriMark
   = '-' / [_.!~*'()]
-*/
 
 //RegularExpressions
 //==========
 
-/* Unused
 Pattern
   = Disjunction
 
@@ -138,14 +135,13 @@ ClassEscape
   / 'b'
   / CharacterEscape
   / CharacterClassEscape
-*/
 
 //JSONLexicalGrammar
 //==========
 
-/* Unused
 JSONWhiteSpace
   = [\u0009\u000D\u000A\u0020]
+
 JSONString
   = ["] JSONStringCharacters? ["]
 
@@ -205,4 +201,40 @@ JSONArray
 
 JSONElementList
   = JSONValue ( , JSONValue)*
-*/
+
+//Comment
+//==========
+
+MultiLineComment
+  = '/*' MultiLineCommentChars? '*/'
+
+  MultiLineCommentChars
+    = MultiLineNotAsteriskChar MultiLineCommentChars?
+    / '*' PostAsteriskCommentChars?
+
+  PostAsteriskCommentChars
+    = MultiLineNotForwardSlashOrAsteriskChar MultiLineCommentChars?
+    / '*' PostAsteriskCommentChars?
+
+  MultiLineNotAsteriskChar
+    = !'*' .
+
+  MultiLineNotForwardSlashOrAsteriskChar
+    = ![/*] .
+
+InLineComment
+  = '/*' InLineCommentChars? '*/'
+
+  InLineCommentChars
+    = InLineNotAsteriskChar InLineCommentChars?
+    / "*" PostAsteriskInLineCommentChars?
+
+  PostAsteriskInLineCommentChars
+    = InLineNotForwardSlashOrAsteriskChar InLineCommentChars?
+    / "*" PostAsteriskInLineCommentChars?
+
+  InLineNotAsteriskChar
+    = !('*' / LINE_TERMINATOR) .
+
+  InLineNotForwardSlashOrAsteriskChar
+    = !([/*] / LINE_TERMINATOR) .
