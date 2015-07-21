@@ -2,7 +2,8 @@
 //==========
 
 File
-  = { (__ @SourceFile)? __ #File }
+  = { __ (@DeclarationElement (__ @DeclarationElement)* __ EOF #DTSFile
+  / @ImplementationElement (__ @ImplementationElement)* __ EOF #TsFile)? }
 
   W
     = [a-zA-Z0-9_]
@@ -48,12 +49,11 @@ File
   "instanceof"  = 'instanceof' !W
   "interface"   = 'interface' !W
   "let"         = 'let' !W
-  "module"      = 'module'
+  "module"      = 'module' !W
   "new"         = 'new' !W
   "null"        = 'null' !W
   "number"      = 'number' !W
   "return"      = 'return' !W
-  "package"     = 'package' !W
   "private"     = 'private' !W
   "protected"   = 'protected' !W
   "public"      = 'public' !W
@@ -73,7 +73,6 @@ File
   "void"        = 'void' !W
   "while"       = 'while' !W
   "with"        = 'with' !W
-  "yield"       = 'yield' !W
   "<"   = '<' ![<=]
   ">"   = '>' ![>=]
   "=="  = '==' ![=]
@@ -95,37 +94,31 @@ File
 //SourceFilesAndExternalModules
 //==========
 
-SourceFile
-  = ImplementationElements
-  / DeclarationElements
-
-  ImplementationElements
-    = ImplementationElement (__ @ImplementationElement)*
-
     ImplementationElement
       = ModuleElement
       / ExportAssignment
       / AmbientExternalModuleDeclaration
-      / { ("export" __ #Export)? @ExternalImportDeclaration }
+      / { "export" __ #Export } @ExternalImportDeclaration
+      / ExternalImportDeclaration
 
       ExportAssignment
-        = { "export" __ "=" __ @Identifier __ ';' #ExportAssignment }
+        = { "export" __ "=" __ @Identifier EOS #ExportAssignment }
 
       ExternalImportDeclaration
-        = { "import" __ @Identifier __ "=" __ @ExternalModuleReference __ ';' #ExternalImportDeclaration }
+        = { "import" __ @Identifier __ "=" __ @ExternalModuleReference EOS #ExternalImportDeclaration }
 
         ExternalModuleReference
           = { "require" __ '(' __ @StringLiteral __ ')' #ExternalModuleReference }
 
-  DeclarationElements
-    = { @DeclarationElement (__ @DeclarationElement)* }
-
     DeclarationElement
       = ExportAssignment
       / AmbientExternalModuleDeclaration
-      / { ("export" __ #Export)? (
+      / { "export" __ #Export} (
       @InterfaceDeclaration / @TypeAliasDeclaration / @ImportDeclaration / @AmbientDeclaration / @ExternalImportDeclaration
-      ) }
+      )
+      / (
+      InterfaceDeclaration / TypeAliasDeclaration / ImportDeclaration / AmbientDeclaration / ExternalImportDeclaration
+      )
 
 //Interfaces
 //==========
@@ -137,7 +130,7 @@ InterfaceDeclaration
     = { "extends" __ @ClassOrInterfaceTypeList #InterfaceExtendsClause }
 
     ClassOrInterfaceTypeList
-      = { @ClassOrInterfaceType (__ ',' __ @ClassOrInterfaceType)* }
+      = { @ClassOrInterfaceType (__ ',' __ @ClassOrInterfaceType)* #List }
 
     ClassOrInterfaceType
       = TypeReference
@@ -146,23 +139,23 @@ InterfaceDeclaration
 //==========
 
 ClassDeclaration
-  = { "class" __ @Identifier (__ typeParameters)? __ @ClassHeritage __ '{' (__ @ClassElements)? __ '}' #ClassDeclaration }
+  = { "class" __ @Identifier (__ typeParameters)? (__ classHeritage)? __ '{' (__ @ClassElementList)? __ '}' #ClassDeclaration }
 
-  ClassHeritage
-    = { @ClassExtendsClause (__ @ImplementsClause)?
-    / @ImplementsClause }
+  classHeritage
+    = @ClassExtendsClause (__ @ImplementsClause)?
+    / @ImplementsClause
 
     ClassExtendsClause
-      = { "extends" __ @ClassType #Extends }
+      = { "extends" #Extends } __ @ClassType
 
       ClassType
         = TypeReference
 
     ImplementsClause
-      = { "implements" __ @ClassOrInterfaceTypeList #Implements }
+      = { "implements" #Implements } __ @ClassOrInterfaceTypeList
 
-  ClassElements
-    = { @ClassElement (__ @ClassElement)* }
+  ClassElementList
+    = { @ClassElement (__ @ClassElement)* #List }
 
     ClassElement
       = ConstructorDeclaration
@@ -170,70 +163,65 @@ ClassDeclaration
       / IndexMemberDeclaration
 
       ConstructorDeclaration
-        = { (@ConstructorOverloads __)? @ConstructorImplementation #ConstructorDeclaration}
+        = { (@ConstructorOverload __)* @ConstructorImplementation #List}
 
-        ConstructorOverloads
-          = { @ConstructorOverload (__ @ConstructorOverload)* }
-
-          ConstructorOverload
-            = { (@AccessibilityModifier __)? "constructor" __ '(' (__ @ParameterList)? __ ')' __ ';' #ConstructorOverload }
+        ConstructorOverload
+          = { (@AccessibilityModifier __)? "constructor" __ '(' (__ @ParameterList)? __ ')' EOS #ConstructorDeclaration }
 
         ConstructorImplementation
-          = { (@AccessibilityModifier __)? "constructor" __ '(' (__ @ParameterList)? __ ')' __ '{' __ @FunctionBody __ '}' #ConstructorImplementation }
+          = { (@AccessibilityModifier __)? "constructor" __ '(' (__ @ParameterList)? __ ')' __ '{' __ @FunctionBody __ '}' #ConstructorDeclaration }
 
       PropertyMemberDeclaration
-        = { (@MemberVariableDeclaration
-        / @MemberFunctionDeclaration
-        / @MemberAccessorDeclaration) #PropertyMemberDeclaration }
+        = MemberVariableDeclaration
+        / MemberFunctionDeclaration
+        / MemberAccessorDeclaration
 
         MemberVariableDeclaration
-          = { (@AccessibilityModifier __)? ("static" __)? @PropertyName (__ typeAnnotation)? (__ initialiser)? __ ';' #MemberVariableDeclaration }
+          = { (@AccessibilityModifier __)? ( @{"static" __ #Static } )? @PropertyName (__ typeAnnotation)? (__ initialiser)? EOS #MemberVariableDeclaration }
 
         MemberFunctionDeclaration
-          = { (@MemberFunctionOverloads __)? @MemberFunctionImplementation #MemberFunctionDeclaration }
+          = { (@MemberFunctionOverload __)* @MemberFunctionImplementation #List }
 
-          MemberFunctionOverloads
-            = { @MemberFunctionOverload (__ @MemberFunctionOverload)* }
-
-            MemberFunctionOverload
-              = { (@AccessibilityModifier __)? ("static" __)? @PropertyName __ @CallSignature __ ';' #MemberFunctionOverload }
+          MemberFunctionOverload
+            = { (@AccessibilityModifier __)? ( @{"static" __ #Static } )? @PropertyName __ @CallSignature EOS #MemberFunctionDeclaration }
 
           MemberFunctionImplementation
-            = { (@AccessibilityModifier __)? ("static" __)? @PropertyName __ @CallSignature __ '{' __ @FunctionBody __ '}' #MemberFunctionImplementation }
+            = { (@AccessibilityModifier __)? ( @{"static" __ #Static } )? @PropertyName __ @CallSignature __ '{' __ @FunctionBody __ '}' #MemberFunctionDeclaration }
 
         MemberAccessorDeclaration
-          = { (@AccessibilityModifier __)? ("static" __)? (@GetAccessor / @SetAccessor) #MemberAccessorDeclaration }
+          = { (@AccessibilityModifier __)? ( @{"static" __ #Static} )? (@GetAccessor / @SetAccessor) #MemberAccessorDeclaration }
 
       IndexMemberDeclaration
-        = { @IndexSignature __ ';' #IndexMemberDeclaration }
+        = { @IndexSignature EOS #IndexMemberDeclaration }
 
 //Enums
 //==========
 
 EnumDeclaration
-  = { "enum" __ @Identifier __ '{' (__ @EnumBody)? __ '}' #EnumDeclaration }
+  = { "enum" __ @Identifier __ '{' (__ enumBody)? __ '}' #EnumDeclaration }
+  / { "const" __ "enum" __ @Identifier __ '{' (__ enumBody)? __ '}' #ConstEnumDeclaration }
 
-  EnumBody
-    = { @ConstantEnumMembers (__ ',')? }
-    / { @ConstantEnumMembers __ ',' __ @EnumMemberSections (__ ',')? }
-    / { @EnumMemberSections (__ ',')? }
+  enumBody
+    = @ConstantEnumMemberList (__ ',')?
+    / @ConstantEnumMemberList __ ',' __ @EnumMemberSectionList (__ ',')?
+    / @EnumMemberSectionList (__ ',')?
 
-    ConstantEnumMembers
-      = { @PropertyName (__ ',' __ @PropertyName)* #ConstantEnumMembers }
+    ConstantEnumMemberList
+      = { @PropertyName (__ ',' __ @PropertyName)* #List }
 
-    EnumMemberSections
-      = { @EnumMemberSection (__ ',' __ @EnumMemberSection)* #EnumMemberSection}
+    EnumMemberSectionList
+      = { @EnumMemberSection (__ ',' __ @EnumMemberSection)* #List }
 
       EnumMemberSection
         = ConstantEnumMemberSection
         / ComputedEnumMember
 
         ConstantEnumMemberSection
-          = { @PropertyName __ "=" __ @ConstantEnumValue (__ ',' __ @ConstantEnumMembers)? #ConstantEnumMemberSection}
+          = { @PropertyName __ "=" __ @ConstantEnumValue (__ ',' __ @ConstantEnumMemberList)? #ConstantEnumMemberSection}
 
           ConstantEnumValue
-            = { SIGNED_INTEGER #SignedInteger }
-            / HexIntegerLiteral
+            = HexIntegerLiteral
+            / { SIGNED_INTEGER #SignedInteger }
 
         ComputedEnumMember
           = { @PropertyName __ "=" __ @AssignmentExpression #ComputedEnumMember }
@@ -243,21 +231,24 @@ EnumDeclaration
 
 ModuleElement
   = Statement
-  / { ("export" __ #Export)? (
-  @VariableDeclaration / functionDeclaration / @ClassDeclaration / @InterfaceDeclaration / @TypeAliasDeclaration / @EnumDeclaration / @ModuleDeclaration / @ImportDeclaration / @AmbientDeclaration
-  ) }
+  / { "export" __ #Export} (
+   @FunctionDeclaration / @ClassDeclaration / @InterfaceDeclaration / @TypeAliasDeclaration / @EnumDeclaration / @ModuleDeclaration / @ImportDeclaration / @AmbientDeclaration / @VariableDeclaration
+  )
+  / (
+   FunctionDeclaration / ClassDeclaration / InterfaceDeclaration / TypeAliasDeclaration / EnumDeclaration / ModuleDeclaration / ImportDeclaration / AmbientDeclaration / VariableDeclaration
+  )
 
   ModuleDeclaration
-    = { "module" __ @IdentifierPath __ '{' (__ @ModuleElements)? __ '}' #ModuleDeclaration }
+    = { "module" __ @IdentifierPath __ '{' (__ @ModuleElementList)? __ '}' #ModuleDeclaration }
 
     IdentifierPath
-      = { @Identifier (__ '.' __ @Identifier)* #IdentifierPath }
+      = { @Identifier (__ '.' __ @Identifier)*  #IdentifierPath }
 
-    ModuleElements
-      = { @ModuleElement (__ @ModuleElement)* }
+    ModuleElementList
+      = { @ModuleElement (__ @ModuleElement)* #List }
 
   ImportDeclaration
-    = { "import" __ @Identifier __ "=" __ @EntityName __ ';' #ImportDeclaration }
+    = { "import" __ @Identifier __ "=" __ @EntityName EOS #ImportDeclaration }
 
     EntityName
       = { @Identifier (__ '.' __ @Identifier)* #EntityName }
@@ -267,83 +258,83 @@ ModuleElement
 
 AmbientDeclaration
   = { "declare" __ (
-  @AmbientVariableDeclaration / @AmbientFunctionDeclaration / @AmbientClassDeclaration / @AmbientEnumDeclaration / @AmbientModuleDeclaration
+  @AmbientVariableDeclaration / @AmbientFunctionDeclaration / @AmbientClassDeclaration / @AmbientEnumDeclaration / @AmbientModuleDeclaration / @AmbientExternalModuleDeclaration / @TypeAliasDeclaration
   ) #AmbientDeclaration }
 
   AmbientVariableDeclaration
-    = { "var" __ @Identifier (__ typeAnnotation)? __ ';' #AmbientVariableDeclaration }
+    = { "var" __ @Identifier (__ typeAnnotation)? EOS #AmbientVariableDeclaration }
 
   AmbientFunctionDeclaration
-    = { "function" __ @Identifier __ @CallSignature __ ';' #AmbientFunctionDeclaration}
+    = { "function" __ @Identifier __ @CallSignature EOS #AmbientFunctionDeclaration}
 
   AmbientClassDeclaration
-    = { "class" __ @Identifier (__ typeParameters)? __ @ClassHeritage __ '{' (__ @AmbientClassBodyElements)? __ '}' #AmbientClassDeclaration }
+    = { "class" __ @Identifier (__ typeParameters)? (__ classHeritage)? __ '{' (__ @AmbientClassBodyElementList)? __ '}' #AmbientClassDeclaration }
 
-      AmbientClassBodyElements
-        = { @AmbientClassBodyElement (__ @AmbientClassBodyElement)* }
+      AmbientClassBodyElementList
+        = { @AmbientClassBodyElement (__ @AmbientClassBodyElement)* #List }
 
       AmbientClassBodyElement
         = AmbientConstructorDeclaration
         / AmbientPropertyMemberDeclaration
-        / IndexSignature
+        / IndexSignature __ EOS
 
         AmbientConstructorDeclaration
-          = { "constructor" __ '(' (__ @ParameterList)? __ ')' __ ';' #AmbientConstructorDeclaration }
+          = { "constructor" __ '(' (__ @ParameterList)? __ ')' EOS #AmbientConstructorDeclaration }
 
         AmbientPropertyMemberDeclaration
-          = { (@AccessibilityModifier __)? ("static" __ #Static)? @PropertyName (__ (typeAnnotation / @CallSignature))? __ ';' #AmbientPropertyMemberDeclaration }
+          = { (@AccessibilityModifier __)? @PropertyName (__ (typeAnnotation / @CallSignature))? EOS #AmbientPropertyMemberDeclaration }
+          / { (@AccessibilityModifier __)? ( @{"static" __ #Static} ) @PropertyName (__ (typeAnnotation / @CallSignature))? EOS #AmbientPropertyMemberDeclaration }
 
   AmbientEnumDeclaration
-    = { "enum" __ @Identifier __ '{' (__ @AmbientEnumBody)? __ '}' #AmbientEnumDeclaration }
-
-    AmbientEnumBody
-      = { @AmbientEnumMemberList (__ ',')? }
+    = { "enum" __ @Identifier __ '{' (__ @AmbientEnumMemberList (__ ',')? )? __ '}' #AmbientEnumDeclaration }
+    / { "const" __ "enum" __ @Identifier __ '{' (__ @AmbientEnumMemberList (__ ',')? )? __ '}' #ConstAmbientEnumDeclaration }
 
     AmbientEnumMemberList
-      = { @AmbientEnumMember (__ ',' __ @AmbientEnumMember)* }
+      = { ambientEnumMember (__ ',' __ ambientEnumMember)* #List }
 
-    AmbientEnumMember
-      = { @PropertyName (__ "=" __ @ConstantEnumValue)? }
+    ambientEnumMember
+      = @PropertyName (__ "=" __ @ConstantEnumValue)?
 
   AmbientModuleDeclaration
-    = { "module" __ @IdentifierPath __ '{' (__ @AmbientModuleElements)? __ '}' #AmbientModuleDeclaration }
+    = { "module" __ @IdentifierPath __ '{' (__ @AmbientModuleElementList)? __ '}' #AmbientModuleDeclaration }
 
-    AmbientModuleElements
-      = { @AmbientModuleElement (__ @AmbientModuleElement)* }
+    AmbientModuleElementList
+      = { @AmbientModuleElement (__ @AmbientModuleElement)* #List }
 
     AmbientModuleElement
-      = { ("export" __ #Export)? (
-      @AmbientVariableDeclaration / @AmbientFunctionDeclaration / @AmbientClassDeclaration / @InterfaceDeclaration / @AmbientEnumDeclaration / @AmbientModuleDeclaration / @ImportDeclaration
-      ) }
+      = { "export" __ #Export } (
+      @AmbientVariableDeclaration / @AmbientFunctionDeclaration / @AmbientClassDeclaration / @InterfaceDeclaration / @AmbientEnumDeclaration / @AmbientModuleDeclaration / @AmbientExternalModuleDeclaration / @ImportDeclaration / @TypeAliasDeclaration
+      )
+      / (
+      AmbientVariableDeclaration / AmbientFunctionDeclaration / AmbientClassDeclaration / InterfaceDeclaration / AmbientEnumDeclaration / AmbientModuleDeclaration / AmbientExternalModuleDeclaration / ImportDeclaration / TypeAliasDeclaration
+      )
 
 AmbientExternalModuleDeclaration
-  = { "module" __ @StringLiteral __ '{' (__ @AmbientExternalModuleElements)? __ '}' #AmbientExternalModuleDeclaration }
+  = { "module" __ @StringLiteral __ '{' (__ @AmbientExternalModuleElementList)? __ '}' #AmbientExternalModuleDeclaration }
 
-  AmbientExternalModuleElements
-    = { @AmbientExternalModuleElement (__ @AmbientExternalModuleElement)* }
+  AmbientExternalModuleElementList
+    = { @AmbientExternalModuleElement (__ @AmbientExternalModuleElement)* #List }
 
   AmbientExternalModuleElement
     = AmbientModuleElement
     / ExportAssignment
-    / { ("export" __ #Export)? @ExternalImportDeclaration }
+    / { "export" #Export } __ @ExternalImportDeclaration
+    / ExternalImportDeclaration
 
 //FunctionDeclaration
 //==========
 
-functionDeclaration
-  =  (functionOverloads __)? @FunctionImplementation
+FunctionDeclaration
+  = { (@FunctionOverload __)* @FunctionImplementation #List }
 
-  functionOverloads
-    = @FunctionOverload (__ @FunctionOverload)*
-
-    FunctionOverload
-      = { "function" __ @Identifier __ @CallSignature __ ';' #FuncDecl }
+  FunctionOverload
+    = { "function" __ @Identifier __ @CallSignature EOS #FuncDecl }
 
   FunctionImplementation
     = { "function" __ @Identifier __ @CallSignature __ '{' __ @FunctionBody __ '}' #FuncDecl }
 
     FunctionBody
-      = { @SourceFile #FuncBody }
+      = { (__ @ModuleElement)* #FuncBody }
 
 //Statement
 //==========
@@ -369,7 +360,7 @@ Statement
     = '{' { (__ @Statement)* __ #Block } __ '}'
 
   VariableStatement
-    = { "var" __ @VariableDeclarationList __ ';' #VarDeclStmt }
+    = { "var" __ @VariableDeclarationList EOS #VarDeclStmt }
 
     VariableDeclarationList
       = { @VariableDeclaration (__ ',' __ @VariableDeclaration)* #List }
@@ -393,13 +384,13 @@ Statement
     = { ';' #Empty }
 
   ExpressionStatement
-    = !('{' / "function") Expression __ ';'
+    = !('{' / "function") Expression EOS
 
   IfStatement
     = { "if" __ '(' __ @Expression __ ')' __ @Statement (__ "else" __ @Statement)? #If }
 
   IterationStatement
-    = { "do" __ @Statement __ "while" __ '(' __ @Expression __ ')' __ ';' #DoWhile }
+    = { "do" __ @Statement __ "while" __ '(' __ @Expression __ ')' EOS #DoWhile }
     / { "while" __ '(' __ @Expression __ ')' __ @Statement #While }
     / { "for" __ '(' (__ @ExpressionNoIn)? __ ';' (__ @Expression)? __ ';' (__ @Expression)? __ ')' __ @Statement #For }
     / { "for" __ '(' __ "var" __ @VariableDeclarationListNoIn __ ';' (__ @Expression)? __ ';' (__ @Expression)? __ ')' __ @Statement #ForVar }
@@ -407,13 +398,13 @@ Statement
     / { "for" __ '(' __ "var" __ @VariableDeclarationNoIn __ "in" __ @Expression __ ')' __ @Statement #ForVarEach }
 
   ContinueStatement
-    = { "continue" (_ @Identifier)? __ ';' #Continue }
+    = { "continue" (_ @Identifier)? EOS #Continue }
 
   BreakStatement
-    = { "break" (_ @Identifier)? __ ';' #Break }
+    = { "break" (_ @Identifier)? EOS #Break }
 
   ReturnStatement
-    = { "return" (_ @Expression)? __ ';' #Return }
+    = { "return" (_ @Expression)? EOS #Return }
 
   WithStatement
     = { "with" __ '(' __ @Expression __ ')' __ @Statement #With }
@@ -437,7 +428,7 @@ Statement
     = { @Identifier __ ':' __ @Statement #Label }
 
   ThrowStatement
-    = { "throw" _ @Expression __ ';' #Throw }
+    = { "throw" _ @Expression EOS #Throw }
 
   TryStatement
     = { "try" __ @Block __ (@Catch (__ finally)? / finally) #Try }
@@ -449,7 +440,7 @@ Statement
     = "finally" __ @Block
 
   DebuggerStatement
-    = "debugger" __ ';' { #Debugger }
+    = "debugger" EOS { #Debugger }
 
 //Expression
 //==========
@@ -477,20 +468,19 @@ Expression
       / '|='    #AssignBitwiseOr
 
     LeftHandSideExpression
-      = NewExpression
-      / CallExpression
+      = CallExpression
+      / NewExpression
 
       NewExpression
         = MemberExpression
         / { "new" __ @NewExpression #New }
 
       CallExpression
-        = MemberExpressionWithArgs {@ __ callOrMemberOperator }*
-        / { "super" __ '(' (__ @ArgumentList)? __ ')' #Super }
-        / { "super" __ '.' __ @IdentifierName #Super }
+        = "super" __ { ('(' (__ @ArgumentList)? __ ')' / '.' __ @IdentifierName)  #Super} {@ __ callOrMemberOperator}*
+        / MemberExpressionWithArgs {@ __ callOrMemberOperator }*
 
         MemberExpressionWithArgs
-          = MemberExpression __ arguments
+          = MemberExpression __ {@ arguments #Apply }
 
         callOrMemberOperator
           = '.' __ @IdentifierName #Field
@@ -511,9 +501,9 @@ Expression
             / '[' __ @Expression __ ']' #Index
 
           ReceiverExpression
-            = PrimaryExpression
+            = NewExpressionWithArgs
             / FunctionExpression
-            / NewExpressionWithArgs
+            / PrimaryExpression
 
             PrimaryExpression
               = { "this" #This }
@@ -553,7 +543,7 @@ Expression
               = { "function" (__ @Identifier)? __ @CallSignature __ '{' __ @FunctionBody __ '}' #Function }
 
             NewExpressionWithArgs
-              = { "new" __ @MemberExpression __ arguments #New }
+              = { "new" __ @MemberExpression __ {@ arguments #Apply } #New }
 
     ConditionalExpression
       = LogicalORExpression {@ __ '?' __ @AssignmentExpression __ ':' __ @AssignmentExpression #Conditional }?
@@ -694,9 +684,9 @@ Literal
     / OctaIntegerLiteral
 
     DecimalLiteral
-      = { DECIMAL_INTEGER_LITERAL #Integer }
-      / { DECIMAL_INTEGER_LITERAL? '.' DECIMAL_DIGITS EXPONENT_PART? #Double }
+      = { DECIMAL_INTEGER_LITERAL? '.' DECIMAL_DIGITS EXPONENT_PART? #Double }
       / { DECIMAL_INTEGER_LITERAL EXPONENT_PART #Double }
+      / { DECIMAL_INTEGER_LITERAL #Integer }
 
       DECIMAL_INTEGER_LITERAL
         = '0'
@@ -852,7 +842,6 @@ Identifier
   RESERVED_WORD
     = KEYWORD
     / FUTURE_RESERVED_WORD
-    / TYPE_SCRIPT_RESERVED_WORD
 
     KEYWORD
       = "break"     / "case"        / "catch"       / "continue"
@@ -867,15 +856,10 @@ Identifier
     FUTURE_RESERVED_WORD
       = "class"     / "const"       / "enum"        / "export"
       / "extends"   / "implements"  / "import"      / "interface"
-      / "let"       / "package"     / "private"     / "protected"
-      / "public"    / "static"      / "super"       / "yield"
+      / "let"       / "private"     / "protected"   / "public"
+      / "super"
 
-    TYPE_SCRIPT_RESERVED_WORD
-      = "any"       / "boolean"     / "constructor" / "declare"
-      / "get"       / "module"      / "number"      / "require"
-      / "set"       / "string"      / "type"
-
-//Space
+//CodeLayout
 //==========
 
 __                   //Space including LineTerminator
@@ -906,20 +890,31 @@ _                  //Space without LineTerminator
   IN_LINE_COMMENT
     = '/*' (!('*/' / LINE_TERMINATOR) .)* '*/'
 
+EOS
+    = __ ';'
+    / _ SINGLE_LINE_COMMENT? LINE_TERMINATOR_SEQUENCE
+    / _ &'}'
+    / __ EOF
+
+  EOF
+      = !.
+
 //Type
 //==========
 
 Type
-  = PrimaryType ("|" @PrimaryType)*
-  / FunctionType
+  = FunctionType
   / ConstructorType
+  / PrimaryTypeAndArrayType (__ "|" __ @PrimaryTypeAndArrayType)*
+
+  PrimaryTypeAndArrayType
+    = PrimaryType {@ _ '[' __ ']' #ArrayType }*
 
   PrimaryType
     = ParenthesizedType
     / PrederinedType
     / TypeReference
     / ObjectType
-    / ArrayType
     / TupleType
     / TypeQuery
 
@@ -927,17 +922,17 @@ Type
       = { '(' __ @Type __ ')' #ParenthesizedType }
 
     PrederinedType
-      = { "any" / "number" / "boolean" / "string" / "void" #Type }
+      = { ( "any" / "number" / "boolean" / "string" / "void" ) #Type }
 
     TypeReference
-      = TypeName
-      / { @TypeName _ typeArguments #TypeReference}
+      = { @TypeName _ typeArguments #TypeReference}
+      / TypeName
 
       TypeName
         = { @Identifier (__ '.'__ @Identifier)* #Type }
 
       typeArguments
-        = "<" __ @TypeArgumentList __ ">"
+        = '<' __ @TypeArgumentList __ '>'
 
         TypeArgumentList
           = { @Type (__ ',' __ @Type)* #List }
@@ -946,17 +941,18 @@ Type
       = { '{' (__ @TypeMemberList)? __ '}' #ObjectType }
 
       TypeMemberList
-        = { @TypeMember (__ ';' __ @TypeMember)* (__ ';')?  #List }
+        = { @TypeMember (EOS __ @TypeMember)* EOS  #List }
 
       TypeMember
-        = PropertySignature
-        / CallSignature
+        = IndexSignature
         / ConstructSignature
-        / IndexSignature
-        / MethodSignature
+        / CallSignature
+        / { @PropertyName (__ '?' @{ #Optional } )? __
+        ( methodSignature
+        / propertySignature ) }
 
-        PropertySignature
-          = { @PropertyName (__ '?' @{ #Optional } )? (__ typeAnnotation)? #PropertySignature }
+        propertySignature
+          = typeAnnotation? #PropertySignature
 
           PropertyName
             = IdentifierName
@@ -972,11 +968,8 @@ Type
         IndexSignature
           = { '[' __ @Identifier __ ':' __ @{ ("string" / "number") #Type } __ ']' __ typeAnnotation #IndexSignature }
 
-        MethodSignature
-          = { @PropertyName (__ '?' @{ #Optional } )? __ @CallSignature #MethodSignature }
-
-    ArrayType
-      = { @PrimaryType _ '[' __ ']' #ArrayType }
+        methodSignature
+          = @CallSignature #MethodSignature
 
     TupleType
       = { '[' __ @TupleElementTypeList __ ']' #TupleType }
@@ -994,40 +987,42 @@ Type
     = { (typeParameters __)? '(' (__ @ParameterList)? __ ')' __ '=>' __ @Type #FunctionType }
 
   ConstructorType
-    = { "new" (__ typeParameters)? __ '(' (__ @ParameterList)? __ ')' __ '=>' @Type #ConstructorType }
+    = { "new" (__ typeParameters)? __ '(' (__ @ParameterList)? __ ')' __ '=>' __ @Type #ConstructorType }
 
     ParameterList
-      = { restParameter
-      / optionalParameterList
-      / requiredParameterList
-      / requiredParameterList __ ',' __ optionalParameterList
-      / requiredParameterList __ ',' __ restParameter
-      / optionalParameterList __ ',' __ restParameter
-      / requiredParameterList __ ',' __ optionalParameterList __ ',' __ restParameter #List }
+      = { (optionalParameter (__ optionalParameterList)?
+      / requiredParameter (__ requiredParameterList)?
+      / restParameter
+      ) #List }
 
       requiredParameterList
-        = requiredParameter (__ ',' __ requiredParameter)*
+        = ',' __
+        ( optionalParameter (__ optionalParameterList)?
+        / requiredParameter (__ requiredParameterList)?
+        / restParameter)
 
         requiredParameter
-          = (@AccessibilityModifier __)? @Identifier (__ typeAnnotation)?
-          / @Identifier __ ':' __ @StringLiteral
+          = @Identifier __ ':' __ @StringLiteral
+          / (@AccessibilityModifier __)? @Identifier (__ typeAnnotation)?
 
         AccessibilityModifier
           = { "public" / "private" / "protected" #AccessibilityModifier}
 
       optionalParameterList
-        = optionalParameter (__ ',' __ optionalParameter)*
+        = ',' __
+        ( optionalParameter (__ optionalParameterList)?
+        / restParameter)
 
         optionalParameter
-          = (@AccessibilityModifier __)? @Identifier __ '?' @{ #Optional } (__ typeAnnotation)?
+          = @Identifier __ '?' @{ #Optional } __ ':' __ @StringLiteral
+          / (@AccessibilityModifier __)? @Identifier __ '?' @{ #Optional } (__ typeAnnotation)?
           / (@AccessibilityModifier __)? @Identifier (__ typeAnnotation)? __ initialiser
-          / @Identifier __ '?' @{ #Optional } __ ':' __ @StringLiteral
 
       restParameter
         = '...' @{ #VariableLength } __ @Identifier (__ typeAnnotation)?
 
 typeParameters
-  = "<" __ @TypeParameterList __ ">"
+  = '<' __ @TypeParameterList __ '>'
 
   TypeParameterList
     = { @TypeParameter (__ ',' __ @TypeParameter)*  #List}
@@ -1039,7 +1034,7 @@ typeParameters
     = { "extends" __ @Type #Constraint }
 
 TypeAliasDeclaration
-  = { "type" __ @Identifier __ '=' __ @Type __ ';' #TypeAliasDeclaration }
+  = { "type" __ @Identifier __ '=' __ @Type EOS #TypeAliasDeclaration }
 
 typeAnnotation
   = ':' __ @Type

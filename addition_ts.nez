@@ -238,3 +238,25 @@ InLineComment
 
   InLineNotForwardSlashOrAsteriskChar
     = !([/*] / LINE_TERMINATOR) .
+
+//FuncBody
+//==========
+
+    = { (@Imple (__ @Imple)* / @Declar (__ @Declar)*) #FuncBody }
+
+    Imple
+      = ModuleElement
+      / ExportAssignment
+      / AmbientExternalModuleDeclaration
+      / { "export" __ #Export } @ExternalImportDeclaration
+      / ExternalImportDeclaration
+
+    Declar
+      = ExportAssignment
+      / AmbientExternalModuleDeclaration
+      / { "export" __ #Export} (
+      @InterfaceDeclaration / @TypeAliasDeclaration / @ImportDeclaration / @AmbientDeclaration / @ExternalImportDeclaration
+      )
+      / (
+      InterfaceDeclaration / TypeAliasDeclaration / ImportDeclaration / AmbientDeclaration / ExternalImportDeclaration
+      )
